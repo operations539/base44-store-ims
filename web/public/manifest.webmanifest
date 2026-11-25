@@ -1,0 +1,19 @@
+{
+  "name": "KoolMart Store IMS",
+  "short_name": "KoolMart IMS",
+  "description": "Store inventory, dispatch and site material control for Kool Mart India.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8FAFC",
+  "theme_color": "#1E3A8A",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
