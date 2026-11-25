@@ -10,6 +10,7 @@ const EMPTY = {
   emulated: false,
   permissions: [],
   nav: [],
+  mobileNav: [],
   googleEnabled: false,
 };
 
@@ -30,6 +31,7 @@ export function AuthProvider({ children }) {
         emulated: !!data.emulated,
         permissions: data.permissions || [],
         nav: data.nav || [],
+        mobileNav: data.mobileNav || [],
         googleEnabled: !!data.googleEnabled,
       });
       return data;

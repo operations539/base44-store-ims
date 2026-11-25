@@ -220,18 +220,18 @@ export default function Dashboard() {
             </Card>
           ) : null}
 
-          <Card title="Layer 1 scope" subtitle="What is live in this build">
+          <Card title="Layer 2 scope" subtitle="What is live in this build">
             <ul className="small" style={{ margin: 0, paddingLeft: 18, color: 'var(--text-muted)', lineHeight: 1.9 }}>
-              <li>Eight core tables + users, audit, notifications and message logs</li>
-              <li>Email / username login and Google OAuth (when configured)</li>
-              <li>Six-role server-side RBAC with admin emulation</li>
-              <li>Responsive console and mobile PWA shells</li>
-              <li>Admin panel: users, bulk CSV import, demo data reset</li>
+              <li>MRN raise, split-panel approval and item-wise dispatch tracking</li>
+              <li>Direct PO with optional approval, ₹0 rate and fixed terms</li>
+              <li>3-scenario dispatch challans with atomic two-ledger posting</li>
+              <li>Store purchasing receipts that clear minus stock</li>
+              <li>Derived site material ledger, rate-free 3-copy DC print</li>
             </ul>
             <div className="alert alert-blue" style={{ marginTop: 12 }}>
               <Icon name="alert" size={15} />
               <div>
-                MRN approval, Direct PO, dispatch and the five dashboards arrive in Layer 2 and Layer 3.
+                Layer 3 adds the helper mobile PWA, five-stage returns and the executive dashboards.
               </div>
             </div>
           </Card>

@@ -54,9 +54,11 @@ export async function notify(client, userIds, { type, title, body = null, link =
   const values = [];
   const params = [];
   ids.forEach((uid, idx) => {
-    const base = idx * 5;
-    values.push(`($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5})`);
-    params.push(uid, type, title, body, link);
+    const base = idx * 6;
+    values.push(
+      `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5},$${base + 6})`
+    );
+    params.push(uid, type, title, body, link, severity);
   });
   await client.query(
     `INSERT INTO notifications (user_id, type, title, body, link, severity)

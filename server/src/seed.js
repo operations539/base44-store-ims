@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { pool, tx, recomputeItemBalances } from './db.js';
 import { hashPassword } from './auth.js';
 import { bumpSequence } from './numbering.js';
+import { refreshMrnStatus } from './operations.js';
 import { financialYear, istParts } from './util.js';
 
 export const DEMO_PASSWORD = 'Koolmart@123';
@@ -472,6 +473,11 @@ export async function seedDemo() {
 
     const allItems = Object.values(itemIds);
     await recomputeItemBalances(client, allItems);
+
+    // Derive MRN statuses from the dispatch ledger so the demo data is coherent.
+    for (const id of [mrn1, mrn2, mrn3, mrn4]) {
+      await refreshMrnStatus(client, id);
+    }
 
     return {
       skipped: false,

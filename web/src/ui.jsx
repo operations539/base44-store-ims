@@ -128,6 +128,12 @@ const STATUS_TONES = {
   Low: 'neutral',
   'High Side': 'navy',
   'Low Side': 'blue',
+  Dispatched: 'blue',
+  Delivered: 'green',
+  Returned: 'red',
+  'Not Required': 'neutral',
+  Cancelled: 'red',
+  'Pending Approval': 'amber',
 };
 
 export function StatusBadge({ value }) {

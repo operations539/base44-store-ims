@@ -1,6 +1,44 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { HttpError, wrap } from '../util.js';
+import { approvedQtyOf, mrnStage } from '../operations.js';
+
+/** Attach the derived tracking stage and dispatched quantity to MRN rows. */
+async function decorateTracking(rows) {
+  if (!rows.length) return [];
+  const ids = rows.map((r) => r.id);
+  const [challans, dispatched] = await Promise.all([
+    query(
+      `SELECT id, doc_kind, status, signed_dc_photo_url, linked_mrn_id
+         FROM challans WHERE linked_mrn_id = ANY($1::uuid[])`,
+      [ids]
+    ),
+    query(
+      `SELECT c.linked_mrn_id, SUM(cl.qty) AS qty
+         FROM challans c JOIN challan_lines cl ON cl.challan_id = c.id
+        WHERE c.linked_mrn_id = ANY($1::uuid[]) AND c.doc_kind = 'DC' AND c.status <> 'Cancelled'
+        GROUP BY c.linked_mrn_id`,
+      [ids]
+    ),
+  ]);
+  const docsByMrn = new Map();
+  for (const doc of challans.rows) {
+    if (!docsByMrn.has(doc.linked_mrn_id)) docsByMrn.set(doc.linked_mrn_id, []);
+    docsByMrn.get(doc.linked_mrn_id).push(doc);
+  }
+  const dispatchedByMrn = new Map(dispatched.rows.map((r) => [r.linked_mrn_id, Number(r.qty)]));
+
+  return rows.map((row) => {
+    const lines = Array.isArray(row.line_items) ? row.line_items : [];
+    return {
+      ...row,
+      stage: mrnStage(row.status, docsByMrn.get(row.id) || []),
+      requested_qty: lines.reduce((sum, l) => sum + Number(l.qty || 0), 0),
+      approved_qty: lines.reduce((sum, l) => sum + approvedQtyOf(l), 0),
+      dispatched_qty: dispatchedByMrn.get(row.id) || 0,
+    };
+  });
+}
 
 const router = Router();
 
@@ -73,7 +111,8 @@ router.get(
         LIMIT 50`,
       params
     );
-    res.json({ requests: rows });
+    const decorated = await decorateTracking(rows);
+    res.json({ requests: decorated });
   })
 );
 
@@ -126,7 +165,7 @@ router.get(
       scope = `AND s.assigned_supervisor_id = $${params.length}`;
     }
     const { rows } = await query(
-      `SELECT m.id, m.mrn_no, m.mrn_date, m.status, m.routing_type, m.priority,
+      `SELECT m.id, m.mrn_no, m.mrn_date, m.status, m.routing_type, m.priority, m.line_items,
               s.site_project_id, s.client_project_name,
               (SELECT count(*)::int FROM challans c WHERE c.linked_mrn_id = m.id) AS challan_count,
               (SELECT count(*)::int FROM challans c WHERE c.linked_mrn_id = m.id
@@ -137,7 +176,8 @@ router.get(
         ORDER BY m.mrn_date DESC LIMIT 50`,
       params
     );
-    res.json({ tracking: rows });
+    const decorated = await decorateTracking(rows);
+    res.json({ tracking: decorated });
   })
 );
 

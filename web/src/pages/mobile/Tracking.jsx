@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
 import { get } from '../../api.js';
-import { Badge, EmptyState, Spinner, StatusBadge, fmtDate } from '../../ui.jsx';
+import { Badge, EmptyState, Spinner, StatusBadge, fmtDate, qty } from '../../ui.jsx';
 
-const STEPS = ['Pending', 'Approved', 'Dispatched', 'Delivered', 'Returned'];
+const STEPS = ['Pending', 'Approved', 'Partial', 'Dispatched', 'Delivered', 'Returned'];
 
-function stageIndex(status, challanCount) {
-  if (status === 'Fulfilled') return 3;
-  if (status === 'Partial') return 2;
-  if (status === 'Approved') return challanCount > 0 ? 2 : 1;
-  if (status === 'Rejected') return 0;
-  return 0;
+function stageIndex(stage) {
+  const idx = STEPS.indexOf(stage);
+  if (idx >= 0) return idx;
+  return stage === 'Rejected' ? 0 : 0;
 }
 
 export default function Tracking() {
@@ -30,7 +28,7 @@ export default function Tracking() {
       <div style={{ marginBottom: 14 }}>
         <h2 style={{ fontSize: 17 }}>Live tracking</h2>
         <p className="small muted" style={{ margin: '4px 0 0' }}>
-          Pending → Approved → Dispatched → Delivered → Returned.
+          Pending → Approved → Partial → Dispatched → Delivered → Returned.
         </p>
       </div>
 
@@ -43,7 +41,7 @@ export default function Tracking() {
       ) : null}
 
       {rows.map((m) => {
-        const idx = stageIndex(m.status, m.challan_count);
+        const idx = stageIndex(m.stage || m.status);
         return (
           <div className="mobile-card" key={m.id}>
             <div className="row">
@@ -52,7 +50,7 @@ export default function Tracking() {
                 <div className="code">{m.mrn_no}</div>
               </div>
               <span className="spacer" />
-              <StatusBadge value={m.status} />
+              <StatusBadge value={m.stage || m.status} />
             </div>
 
             <div className="stage-track">
@@ -63,9 +61,15 @@ export default function Tracking() {
 
             <div className="row" style={{ marginTop: 8, gap: 6, flexWrap: 'wrap' }}>
               <span className="small muted">
-                {STEPS[idx]} · raised {fmtDate(m.mrn_date)}
+                {m.stage || m.status} · raised {fmtDate(m.mrn_date)}
               </span>
               <span className="spacer" />
+              <Badge tone={m.dispatched_qty > 0 ? 'blue' : 'neutral'}>
+                {qty(m.dispatched_qty || 0)} / {qty(m.approved_qty || m.requested_qty || 0)} dispatched
+              </Badge>
+            </div>
+
+            <div className="row" style={{ marginTop: 6, gap: 6 }}>
               {m.challan_count > 0 ? (
                 <Badge tone={m.signed_count === m.challan_count ? 'green' : 'amber'}>
                   {m.signed_count}/{m.challan_count} signed

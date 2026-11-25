@@ -103,10 +103,29 @@ curl -s localhost:3000/api/health
 
 ## Layer status
 
-Layer 1 (this build): schema, auth + RBAC, shells, admin panel, demo seed.
+Layer 1: schema, auth + RBAC, shells, admin panel, demo seed.
 
-Not yet built: MRN approval, Direct PO, the three dispatch scenarios, signed-DC
-capture, the five executive dashboards, messaging/API hub (Layers 2–3).
+Layer 2 (this build): core operational workflows.
+
+| Screen | What it does |
+| --- | --- |
+| Material Requests (`/mrn`) | Raise MRN (site-scoped, no rates), approval queue, split-panel approve / part-approve / reject with live store stock, item-wise dispatched vs remaining, linked PO + challan summary |
+| Direct POs (`/pos`) | Auto `KM/<FY>/PO/<MM>/<seq>`, vendor address & GSTIN auto-fill, fixed terms, optional approvers, ₹0 rate and pending bill never block, A4 print + WhatsApp share |
+| Dispatch Challans (`/challans`) | Auto DC numbers, backdated flag, three flows (Full Store / Split / Direct-to-Site), optional linked MRN, multi-challan partial fulfilment, minus-stock override with audit entry, 3-copy rate-free A4 print |
+| Store Purchasing (`/purchasing`) | Receipt linked to a Direct PO, adds stock (clears minus stock), serials, pending bill + rate 0, bill photo upload, later bill/rate edit |
+| Site Material Ledger (`/site-ledger`) | Derived issued / returned / net at site, quantities only |
+
+Dispatch math is atomic inside one transaction: store-sourced lines write a signed
+`stock_movements` row and recompute `items_master.store_physical_stock`; vendor lines
+write none. The MRN status is then derived from the dispatch ledger
+(`Approved → Partial → Fulfilled`), and the supervisor stage adds
+`Dispatched / Delivered / Returned` from the linked challans.
+
+Bill photos upload to the API (`POST /api/files`, JPG/PNG/WEBP up to 4 MB) and are
+served only to signed-in users through `GET /api/files/:name`.
+
+Not yet built: helper mobile PWA capture of signed DCs, five-stage returns,
+the five executive dashboards, messaging/API hub (Layer 3).
 
 Google OAuth is wired but inactive until `GOOGLE_CLIENT_ID` and
 `GOOGLE_CLIENT_SECRET` are present in the environment.

@@ -10,6 +10,12 @@ import adminRoutes from './routes/admin.js';
 import dashboardRoutes from './routes/dashboard.js';
 import mobileRoutes from './routes/mobile.js';
 import auditRoutes from './routes/audit.js';
+import mrnRoutes from './routes/mrn.js';
+import poRoutes from './routes/pos.js';
+import challanRoutes from './routes/challans.js';
+import purchasingRoutes from './routes/purchasing.js';
+import ledgerRoutes from './routes/ledger.js';
+import fileRoutes from './routes/files.js';
 
 const app = express();
 app.set('trust proxy', true);
@@ -27,6 +33,12 @@ app.use('/api/admin', importRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', masterRoutes);
 app.use('/api', dashboardRoutes);
+app.use('/api', mrnRoutes);
+app.use('/api', poRoutes);
+app.use('/api', challanRoutes);
+app.use('/api', purchasingRoutes);
+app.use('/api', ledgerRoutes);
+app.use('/api', fileRoutes);
 app.use('/api/mobile', mobileRoutes);
 app.use('/api/audit', auditRoutes);
 

@@ -10,6 +10,13 @@ import Items from './pages/Items.jsx';
 import Sites from './pages/Sites.jsx';
 import Vendors from './pages/Vendors.jsx';
 import AuditLogs from './pages/AuditLogs.jsx';
+import Mrn from './pages/operations/Mrn.jsx';
+import MrnNew from './pages/operations/MrnNew.jsx';
+import MrnDetail from './pages/operations/MrnDetail.jsx';
+import Pos from './pages/operations/Pos.jsx';
+import Challans from './pages/operations/Challans.jsx';
+import Purchasing from './pages/operations/Purchasing.jsx';
+import SiteLedger from './pages/operations/SiteLedger.jsx';
 import Users from './pages/admin/Users.jsx';
 import Import from './pages/admin/Import.jsx';
 import DemoData from './pages/admin/DemoData.jsx';
@@ -36,7 +43,8 @@ function PermissionGate({ perm, children }) {
 
 function DesktopArea() {
   const { user } = useAuth();
-  if (MOBILE_ROLES.includes(user.role)) return <Navigate to={homeFor(user.role)} replace />;
+  // Supervisors get the full console too (they raise MRNs on desktop as well).
+  if (user.role === 'store_helper') return <Navigate to={homeFor(user.role)} replace />;
   return <Shell />;
 }
 
@@ -65,7 +73,63 @@ export default function App() {
           </AuthGate>
         }
       >
-        <Route index element={<Dashboard />} />
+        <Route index element={user?.role === 'supervisor' ? <Navigate to="/mrn" replace /> : <Dashboard />} />
+        <Route
+          path="mrn"
+          element={
+            <PermissionGate perm="mrn.read">
+              <Mrn />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="mrn/new"
+          element={
+            <PermissionGate perm="mrn.create">
+              <MrnNew />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="mrn/:id"
+          element={
+            <PermissionGate perm="mrn.read">
+              <MrnDetail />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="pos"
+          element={
+            <PermissionGate perm="po.read">
+              <Pos />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="challans"
+          element={
+            <PermissionGate perm="challan.read">
+              <Challans />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="purchasing"
+          element={
+            <PermissionGate perm="purchase.read">
+              <Purchasing />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="site-ledger"
+          element={
+            <PermissionGate perm="ledger.read">
+              <SiteLedger />
+            </PermissionGate>
+          }
+        />
         <Route
           path="stock"
           element={

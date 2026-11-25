@@ -4,7 +4,8 @@ import { Icon, initials } from '../ui.jsx';
 import { EmulationBanner } from './Shell.jsx';
 
 export default function MobileShell() {
-  const { user, nav, logout } = useAuth();
+  const { user, nav, mobileNav, logout } = useAuth();
+  const tabs = mobileNav?.length ? mobileNav : nav;
   const navigate = useNavigate();
 
   return (
@@ -40,8 +41,8 @@ export default function MobileShell() {
         <Outlet />
       </main>
 
-      <nav className="mobile-tabs" style={{ gridTemplateColumns: `repeat(${nav.length || 1}, 1fr)` }}>
-        {nav.map((tab) => (
+      <nav className="mobile-tabs" style={{ gridTemplateColumns: `repeat(${tabs.length || 1}, 1fr)` }}>
+        {tabs.map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}

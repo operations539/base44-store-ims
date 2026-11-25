@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react';
 import { get } from '../../api.js';
-import { Badge, EmptyState, Icon, Spinner, StatusBadge, fmtDate, qty } from '../../ui.jsx';
+import MrnForm from '../../components/MrnForm.jsx';
+import { Badge, EmptyState, Icon, Modal, Spinner, StatusBadge, fmtDate, qty } from '../../ui.jsx';
 
 export default function Requests() {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
   const [open, setOpen] = useState(null);
+  const [formOpen, setFormOpen] = useState(false);
 
-  useEffect(() => {
+  const load = () =>
     get('/mobile/requests')
       .then((d) => setRows(d.requests))
       .catch((err) => setError(err.message));
+
+  useEffect(() => {
+    load();
   }, []);
 
   if (error) return <div className="alert alert-red">{error}</div>;
@@ -21,15 +26,18 @@ export default function Requests() {
       <div style={{ marginBottom: 14 }}>
         <h2 style={{ fontSize: 17 }}>Material requests</h2>
         <p className="small muted" style={{ margin: '4px 0 0' }}>
-          Scoped to the sites assigned to you. Raising a new MRN arrives in Layer 2.
+          Scoped to the sites assigned to you. No pricing is ever shown.
         </p>
+        <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 10 }} onClick={() => setFormOpen(true)}>
+          <Icon name="plus" size={15} /> Raise MRN
+        </button>
       </div>
 
       {!rows.length ? (
         <EmptyState
           icon="list"
           title="No requests yet"
-          description="Requests raised for your sites will be listed here with their live status."
+          description="Raise a material request and it will appear here with its live status."
         />
       ) : null}
 
@@ -44,7 +52,7 @@ export default function Requests() {
                 <div className="code">{m.mrn_no}</div>
               </div>
               <span className="spacer" />
-              <StatusBadge value={m.status} />
+              <StatusBadge value={m.stage || m.status} />
             </div>
 
             <div className="row" style={{ marginTop: 8, gap: 6, flexWrap: 'wrap' }}>
@@ -53,6 +61,12 @@ export default function Requests() {
               <span className="small muted">
                 Raised {fmtDate(m.mrn_date)}
                 {m.required_date ? ` · needed ${fmtDate(m.required_date)}` : ''}
+              </span>
+            </div>
+
+            <div className="row" style={{ marginTop: 8, gap: 6 }}>
+              <span className="small muted">
+                Dispatched {qty(m.dispatched_qty || 0)} of {qty(m.approved_qty || m.requested_qty || 0)}
               </span>
             </div>
 
@@ -84,6 +98,22 @@ export default function Requests() {
           </div>
         );
       })}
+
+      {formOpen ? (
+        <Modal
+          title="Raise a material request"
+          subtitle="Only your assigned sites are listed."
+          onClose={() => setFormOpen(false)}
+        >
+          <MrnForm
+            onDone={() => {
+              setFormOpen(false);
+              load();
+            }}
+            onCancel={() => setFormOpen(false)}
+          />
+        </Modal>
+      ) : null}
     </>
   );
 }

@@ -31,13 +31,13 @@ export const PERMISSIONS = {
     'purchase.read', 'purchase.create',
     'returns.read', 'returns.raise', 'returns.pickup', 'returns.receive', 'returns.post',
     'dashboards.read', 'audit.read', 'exports.run',
-    'packing.read', 'signed_dc.upload', 'tracking.read',
+    'packing.read', 'signed_dc.upload', 'tracking.read', 'ledger.read',
   ],
   owner: [
     'masters.read',
     'stock.read', 'stock.price.read',
     'mrn.read', 'po.read', 'po.approve', 'challan.read', 'purchase.read', 'returns.read',
-    'dashboards.read', 'audit.read', 'exports.run', 'tracking.read',
+    'dashboards.read', 'audit.read', 'exports.run', 'tracking.read', 'ledger.read',
   ],
   store_manager: [
     'masters.read',
@@ -46,7 +46,7 @@ export const PERMISSIONS = {
     'challan.read', 'challan.create', 'challan.deliver', 'challan.inspect',
     'purchase.read', 'purchase.create',
     'returns.read', 'returns.pickup', 'returns.receive', 'returns.post',
-    'dashboards.read', 'exports.run', 'tracking.read',
+    'dashboards.read', 'exports.run', 'tracking.read', 'ledger.read',
   ],
   store_exec: [
     'masters.read',
@@ -55,10 +55,10 @@ export const PERMISSIONS = {
     'challan.read', 'challan.create', 'challan.deliver',
     'purchase.read', 'purchase.create',
     'returns.read', 'returns.pickup', 'returns.receive',
-    'dashboards.read', 'exports.run', 'tracking.read',
+    'dashboards.read', 'exports.run', 'tracking.read', 'ledger.read',
   ],
   store_helper: ['packing.read', 'signed_dc.upload', 'challan.read', 'returns.receive'],
-  supervisor: ['mrn.create', 'mrn.read', 'returns.raise', 'returns.read', 'tracking.read'],
+  supervisor: ['mrn.create', 'mrn.read', 'returns.raise', 'returns.read', 'tracking.read', 'ledger.read'],
 };
 
 export function can(role, permission) {
@@ -90,7 +90,8 @@ export function requireRole(...roles) {
 /** Mobile-only roles get the bottom-tab shell. */
 export const MOBILE_ROLES = ['store_helper', 'supervisor'];
 
-export function navFor(role) {
+/** Mobile PWA bottom tabs. */
+export function mobileNavFor(role) {
   if (role === 'store_helper') {
     return [
       { to: '/m/packing', label: 'Packing Lists', icon: 'list' },
@@ -104,8 +105,42 @@ export function navFor(role) {
       { to: '/m/tracking', label: 'Tracking', icon: 'truck' },
     ];
   }
+  return [{ to: '/', label: 'Dashboard', icon: 'grid' }];
+}
+
+/** Desktop console navigation. */
+export function navFor(role) {
+  if (role === 'store_helper') return mobileNavFor(role);
+
+  if (role === 'supervisor') {
+    return [
+      {
+        group: 'Operations',
+        items: [
+          { to: '/mrn', label: 'My Site Tracking', icon: 'file' },
+          { to: '/site-ledger', label: 'Site Material Ledger', icon: 'box' },
+        ],
+      },
+      {
+        group: 'Mobile PWA',
+        items: [{ to: '/m/requests', label: 'Field App', icon: 'truck' }],
+      },
+    ];
+  }
+
   const nav = [{ to: '/', label: 'Dashboard', icon: 'grid' }];
   if (can(role, 'stock.read')) nav.push({ to: '/stock', label: 'Live Stock', icon: 'box' });
+
+  const operations = [];
+  if (can(role, 'mrn.read')) operations.push({ to: '/mrn', label: 'Material Requests', icon: 'file' });
+  if (can(role, 'po.read')) operations.push({ to: '/pos', label: 'Direct POs', icon: 'building' });
+  if (can(role, 'challan.read') && role !== 'store_helper') {
+    operations.push({ to: '/challans', label: 'Dispatch Challans', icon: 'truck' });
+  }
+  if (can(role, 'purchase.read')) operations.push({ to: '/purchasing', label: 'Store Purchasing', icon: 'download' });
+  if (can(role, 'ledger.read')) operations.push({ to: '/site-ledger', label: 'Site Material Ledger', icon: 'pin' });
+  if (operations.length) nav.push({ group: 'Operations', items: operations });
+
   if (can(role, 'masters.read')) {
     nav.push({
       group: 'Masters',

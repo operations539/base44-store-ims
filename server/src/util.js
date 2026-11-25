@@ -85,6 +85,12 @@ export function istParts(date = new Date()) {
   return { year: get('year'), month: get('month'), day: get('day') };
 }
 
+/** Today's IST calendar date as YYYY-MM-DD. */
+export function todayIso() {
+  const { year, month, day } = istParts();
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 /** Indian financial year label for a YYYY-MM-DD string (April–March). */
 export function financialYear(dateStr) {
   const [y, m] = dateStr.split('-').map(Number);

@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { query } from './db.js';
-import { ROLE_LABELS, ROLE_TAGS, navFor, permissionsFor } from './rbac.js';
+import { ROLE_LABELS, ROLE_TAGS, mobileNavFor, navFor, permissionsFor } from './rbac.js';
 
 export const COOKIE_NAME = 'km_session';
 const SESSION_DAYS = 7;
@@ -121,6 +121,7 @@ export function sessionPayload(req) {
     emulated: !!req.emulated,
     permissions: permissionsFor(req.user.role),
     nav: navFor(req.user.role),
+    mobileNav: mobileNavFor(req.user.role),
     googleEnabled: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
   };
 }
