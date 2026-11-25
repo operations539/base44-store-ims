@@ -13,6 +13,7 @@ import {
   inr,
   qty,
 } from '../../ui.jsx';
+import Tip from '../../components/Tip.jsx';
 
 const todayIso = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
 
@@ -313,7 +314,15 @@ export default function Purchasing() {
                   required
                 />
               </Field>
-              <Field label="Rate" hint="₹0 is allowed while the bill is pending.">
+              <Field
+                label={
+                  <>
+                    Rate
+                    <Tip text="Bill Pending (Rate = 0): material is received and stocked first; the vendor bill and rate can be edited in later without blocking the store." />
+                  </>
+                }
+                hint="₹0 is allowed while the bill is pending."
+              >
                 <input
                   type="number"
                   min="0"
@@ -335,7 +344,14 @@ export default function Purchasing() {
                   onChange={(e) => setForm({ ...form, tax_percent: e.target.value })}
                 />
               </Field>
-              <Field label="Bill status">
+              <Field
+                label={
+                  <>
+                    Bill status
+                    <Tip text="Bill Pending (Rate = 0): keep the entry open until the vendor invoice arrives, then edit the rate and bill number." />
+                  </>
+                }
+              >
                 <select
                   className="select"
                   value={form.bill_status}

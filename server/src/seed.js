@@ -9,6 +9,12 @@ export const DEMO_PASSWORD = 'Koolmart@123';
 
 const pad = (n) => String(n).padStart(2, '0');
 
+// Self-contained placeholder for demo signed-DC thumbnails.
+const DEMO_SIGNED_DC =
+  'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22480%22%20height%3D%22620%22%3E%3Crect%20width%3D%22480%22%20height%3D%22620%22%20fill%3D%22%23f8fafc%22%2F%3E%3Crect%20x%3D%2214%22%20y%3D%2214%22%20width%3D%22452%22%20height%3D%22592%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%2F%3E%3Ctext%20x%3D%22240%22%20y%3D%2280%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%20font-size%3D%2222%22%20fill%3D%22%231e3a8a%22%3EKOOL%20MART%20INDIA%3C%2Ftext%3E%3Ctext%20x%3D%22240%22%20y%3D%22118%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%23475569%22%3ESIGNED%20DELIVERY%20CHALLAN%20%28DEMO%29%3C%2Ftext%3E%3Ctext%20x%3D%22240%22%20y%3D%22170%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%20font-size%3D%2212%22%20fill%3D%22%2364748b%22%3ESignature%20and%20stamp%20on%20file%3C%2Ftext%3E%3C%2Fsvg%3E';
+
+
+
 function dateAgo(days) {
   const { year, month, day } = istParts(new Date(Date.now() - days * 86400000));
   return `${year}-${pad(month)}-${pad(day)}`;
@@ -274,7 +280,7 @@ export async function seedDemo() {
       vehicle_no: 'MH 01 AB 4521',
       header_remarks: 'Dispatched from main store',
       status: 'Delivered-Signed',
-      signed_dc_photo_url: 'https://images.koolmart.in/demo/signed-dc-dc001.jpg',
+      signed_dc_photo_url: DEMO_SIGNED_DC,
       site_share_link: shareToken(),
       source_department: 'STR',
     });
@@ -320,7 +326,7 @@ export async function seedDemo() {
       driver_delivery_person_name: 'Vendor delivery team',
       vendor_physical_dc_no: 'BRT/DC/2026/0912',
       status: 'Delivered-Signed',
-      signed_dc_photo_url: 'https://images.koolmart.in/demo/signed-dc-dc003.jpg',
+      signed_dc_photo_url: DEMO_SIGNED_DC,
       site_share_link: shareToken(),
       source_department: 'STR',
     });

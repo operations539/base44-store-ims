@@ -138,6 +138,7 @@ export function navFor(role) {
     operations.push({ to: '/challans', label: 'Dispatch Challans', icon: 'truck' });
   }
   if (can(role, 'purchase.read')) operations.push({ to: '/purchasing', label: 'Store Purchasing', icon: 'download' });
+  if (can(role, 'returns.read')) operations.push({ to: '/returns', label: 'Material Returns', icon: 'return' });
   if (can(role, 'ledger.read')) operations.push({ to: '/site-ledger', label: 'Site Material Ledger', icon: 'pin' });
   if (operations.length) nav.push({ group: 'Operations', items: operations });
 
@@ -157,6 +158,9 @@ export function navFor(role) {
       group: 'Administration',
       items: [
         { to: '/admin/users', label: 'Users & Roles', icon: 'users' },
+        { to: '/admin/documents', label: 'Documents & Numbering', icon: 'file' },
+        { to: '/admin/messaging', label: 'Messaging Center', icon: 'bell' },
+        { to: '/admin/api', label: 'API Integration Hub', icon: 'lock' },
         { to: '/admin/import', label: 'Master Import', icon: 'upload' },
         { to: '/admin/data', label: 'Demo Data', icon: 'database' },
       ],

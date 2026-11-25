@@ -16,6 +16,10 @@ import challanRoutes from './routes/challans.js';
 import purchasingRoutes from './routes/purchasing.js';
 import ledgerRoutes from './routes/ledger.js';
 import fileRoutes from './routes/files.js';
+import returnRoutes from './routes/returns.js';
+import adminSettingsRoutes from './routes/adminSettings.js';
+import apiHubRoutes from './routes/apiHub.js';
+import { startSlaScanner } from './sla.js';
 
 const app = express();
 app.set('trust proxy', true);
@@ -41,6 +45,9 @@ app.use('/api', ledgerRoutes);
 app.use('/api', fileRoutes);
 app.use('/api/mobile', mobileRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api', returnRoutes);
+app.use('/api/admin', adminSettingsRoutes);
+app.use('/api/v1', apiHubRoutes);
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Endpoint not found.' }));
 
@@ -59,4 +66,5 @@ app.use((err, req, res, next) => {
 const port = Number(process.env.PORT || 8000);
 app.listen(port, '0.0.0.0', () => {
   console.log(`[api] KoolMart Store IMS listening on ${port}`);
+  startSlaScanner();
 });

@@ -21,7 +21,7 @@ export default function Packing() {
       <div style={{ marginBottom: 14 }}>
         <h2 style={{ fontSize: 17 }}>Approved packing lists</h2>
         <p className="small muted" style={{ margin: '4px 0 0' }}>
-          Price-free. Tap a card to see the items to load.
+          Price-free packing lists with site and transport details. Tap a card to see the items to load.
         </p>
       </div>
 
@@ -57,7 +57,18 @@ export default function Packing() {
             <div className="small muted" style={{ marginTop: 8 }}>
               {c.client_project_name} · {fmtDate(c.challan_date)} · {c.line_count} line
               {c.line_count === 1 ? '' : 's'}
+            </div>
+
+            <div className="small" style={{ marginTop: 6 }}>
+              <strong>{c.transport_mode || 'Transport TBD'}</strong>
               {c.driver_delivery_person_name ? ` · ${c.driver_delivery_person_name}` : ''}
+              {c.vehicle_no ? ` · ${c.vehicle_no}` : ''}
+              {c.driver_phone ? (
+                <div>
+                  <a href={`tel:${c.driver_phone}`}>{c.driver_phone}</a>
+                </div>
+              ) : null}
+              {c.full_site_address ? <div className="faint">{c.full_site_address}</div> : null}
             </div>
 
             <button

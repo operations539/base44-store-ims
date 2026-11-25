@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { get } from '../api.js';
 import { Badge, Card, DataTable, EmptyState, Icon, Spinner, inr, qty } from '../ui.jsx';
+import Tip from '../components/Tip.jsx';
 
 export default function Stock() {
   const [data, setData] = useState(null);
@@ -64,7 +65,10 @@ export default function Stock() {
     <div className="page">
       <div className="page-head">
         <div>
-          <h1>Live stock</h1>
+          <h1>
+            Live stock
+            <Tip text="Minus-Stock Override: an urgent dispatch is never blocked. The signed balance goes negative, the item is flagged amber, and the override is written to the audit trail." />
+          </h1>
           <p>
             Store physical stock is a signed balance — negative values are allowed and flagged in amber, never
             blocked. {data.pricingVisible ? 'Rates are visible for your role.' : 'Rates are hidden for your role.'}

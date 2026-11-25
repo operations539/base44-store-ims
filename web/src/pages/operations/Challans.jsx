@@ -13,6 +13,7 @@ import {
   fmtDate,
   qty,
 } from '../../ui.jsx';
+import Tip from '../../components/Tip.jsx';
 import { DcDocument, PrintOverlay } from '../../print.jsx';
 
 const todayIso = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
@@ -307,7 +308,14 @@ export default function Challans() {
             {formError ? <div className="alert alert-red" style={{ marginBottom: 12 }}>{formError}</div> : null}
 
             <div className="form-grid">
-              <Field label="Dispatch flow">
+              <Field
+                label={
+                  <>
+                    Dispatch flow
+                    <Tip text="Split dispatch: one full DC carrying both store and vendor lines. Direct-to-Site: vendor supplies the site directly, the store ledger stays untouched and the site ledger records the issue." />
+                  </>
+                }
+              >
                 <select className="select" value={form.flow_type} onChange={(e) => setFlow(e.target.value)}>
                   {FLOWS.map((flow) => (
                     <option key={flow.value} value={flow.value}>

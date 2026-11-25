@@ -1,7 +1,10 @@
 import { Router } from 'express';
-import { query } from '../db.js';
-import { HttpError, wrap } from '../util.js';
+import { query, tx } from '../db.js';
+import { HttpError, bad, notFound, str, wrap } from '../util.js';
 import { approvedQtyOf, mrnStage } from '../operations.js';
+import { notify, writeAudit } from '../audit.js';
+import { listReturns, markHandover, markReceived, raiseReturn } from '../returns.js';
+import { userIdsForRoles } from '../settings.js';
 
 /** Attach the derived tracking stage and dispatched quantity to MRN rows. */
 async function decorateTracking(rows) {
@@ -59,9 +62,9 @@ router.get(
   wrap(async (req, res) => {
     const { rows } = await query(
       `SELECT c.id, c.challan_code, c.challan_date, c.flow_type, c.status,
-              c.signed_dc_photo_url, c.sla_48h_breach_flag, c.transport_mode,
-              c.driver_delivery_person_name,
-              s.site_project_id, s.client_project_name,
+              c.signed_dc_photo_url, c.signed_dc_uploaded_at, c.sla_48h_breach_flag, c.transport_mode,
+              c.driver_delivery_person_name, c.driver_phone, c.vehicle_no, c.site_share_link,
+              s.site_project_id, s.client_project_name, s.full_site_address,
               COALESCE(SUM(cl.qty), 0) AS total_qty,
               count(cl.id)::int AS line_count
          FROM challans c
@@ -69,7 +72,7 @@ router.get(
          LEFT JOIN challan_lines cl ON cl.challan_id = c.id
         WHERE c.flow_type IN ('Full Store','Split','Direct Vendor')
           AND c.status IN ('Issued','Delivered-Signed')
-        GROUP BY c.id, s.site_project_id, s.client_project_name
+        GROUP BY c.id, s.site_project_id, s.client_project_name, s.full_site_address
         ORDER BY c.challan_date DESC, c.challan_code DESC
         LIMIT 40`
     );
@@ -121,34 +124,13 @@ router.get(
   '/returns',
   requireMobileRole(['supervisor', 'store_helper', 'admin']),
   wrap(async (req, res) => {
-    const params = [];
-    let scope = '';
-    let statusFilter = "c.status IN ('Return Raised','Pickup Assigned','Picked Up','Store Received')";
-
-    if (req.user.role === 'supervisor') {
-      params.push(req.user.id);
-      scope = `AND s.assigned_supervisor_id = $${params.length}`;
-    } else if (req.user.role === 'store_helper') {
-      statusFilter = "c.status IN ('Picked Up','Store Received')";
-    }
-
-    const { rows } = await query(
-      `SELECT c.id, c.challan_code, c.challan_date, c.status, c.flow_type,
-              c.transport_mode, c.driver_delivery_person_name, c.driver_phone, c.vehicle_no,
-              c.return_raised_at, c.pickup_assigned_at, c.picked_up_at, c.store_received_at,
-              c.system_posted_at, c.short_missing_flagged, c.signed_return_dc_photo_url,
-              s.site_project_id, s.client_project_name,
-              COALESCE(SUM(cl.qty), 0) AS total_qty,
-              count(cl.id)::int AS line_count
-         FROM challans c
-         LEFT JOIN sites_master s ON s.id = c.site_id
-         LEFT JOIN challan_lines cl ON cl.challan_id = c.id
-        WHERE c.flow_type IN ('Return Store','Return Vendor') AND ${statusFilter} ${scope}
-        GROUP BY c.id, s.site_project_id, s.client_project_name
-        ORDER BY c.return_raised_at DESC NULLS LAST, c.challan_code DESC
-        LIMIT 40`,
-      params
-    );
+    const statuses =
+      req.user.role === 'store_helper' ? ['Picked Up', 'Store Received'] : null;
+    const rows = await listReturns({ query }, {
+      supervisorId: req.user.role === 'supervisor' ? req.user.id : null,
+      statuses,
+      limit: 60,
+    });
     res.json({ returns: rows });
   })
 );
@@ -178,6 +160,161 @@ router.get(
     );
     const decorated = await decorateTracking(rows);
     res.json({ tracking: decorated });
+  })
+);
+
+/**
+ * Helper: attach the signed delivery challan photo (1-tap camera upload).
+ * Marks the challan Delivered-Signed and clears its 48-hour alert.
+ */
+router.post(
+  '/signed-dc/:id',
+  requireMobileRole(['store_helper', 'admin']),
+  wrap(async (req, res) => {
+    const photoUrl = str(req.body?.photo_url, { max: 500 });
+    if (!photoUrl) throw bad('Upload the signed challan photo first.', { photo_url: 'Required' });
+
+    const result = await tx(async (client) => {
+      const { rows } = await client.query(
+        `SELECT id, challan_code, status, site_id, signed_dc_photo_url
+           FROM challans WHERE id = $1 AND doc_kind = 'DC' FOR UPDATE`,
+        [req.params.id]
+      );
+      const challan = rows[0];
+      if (!challan) throw notFound('Challan not found.');
+      if (challan.status === 'Cancelled') throw bad('A cancelled challan cannot be signed off.');
+      if (challan.signed_dc_photo_url) throw bad('A signed copy is already on file for this challan.');
+
+      await client.query(
+        `UPDATE challans
+            SET signed_dc_photo_url = $2, status = 'Delivered-Signed',
+                signed_dc_uploaded_at = now(), signed_dc_uploaded_by = $3,
+                sla_48h_breach_flag = false
+          WHERE id = $1`,
+        [challan.id, photoUrl, req.user.id]
+      );
+
+      await writeAudit(client, req, {
+        module: 'Dispatch',
+        recordType: 'challans',
+        recordId: challan.id,
+        action: 'SIGNED_DC_UPLOADED',
+        oldValues: { status: challan.status },
+        newValues: { status: 'Delivered-Signed', photo_url: photoUrl },
+      });
+
+      const managers = await userIdsForRoles(client, ['store_manager', 'store_exec', 'admin']);
+      await notify(client, managers, {
+        type: 'signed_dc_received',
+        title: `${challan.challan_code} signed copy received`,
+        body: 'The signed DC is now in the site archive.',
+        link: '/dashboards',
+        severity: 'info',
+      });
+
+      return { ok: true, status: 'Delivered-Signed', photo_url: photoUrl };
+    });
+
+    res.json(result);
+  })
+);
+
+/** Helper: site-wise signed DC gallery with role-controlled share links. */
+router.get(
+  '/dc-gallery',
+  requireMobileRole(['store_helper', 'admin']),
+  wrap(async (req, res) => {
+    const { rows } = await query(
+      `SELECT c.id, c.challan_code, c.challan_date, c.signed_dc_photo_url, c.signed_dc_uploaded_at,
+              c.site_share_link, s.site_project_id, s.client_project_name,
+              u.full_name AS uploaded_by_name
+         FROM challans c
+         LEFT JOIN sites_master s ON s.id = c.site_id
+         LEFT JOIN users u ON u.id = c.signed_dc_uploaded_by
+        WHERE c.doc_kind = 'DC' AND c.signed_dc_photo_url IS NOT NULL
+        ORDER BY s.site_project_id NULLS LAST, c.signed_dc_uploaded_at DESC NULLS LAST
+        LIMIT 100`
+    );
+    const sites = [];
+    const index = new Map();
+    for (const row of rows) {
+      const key = row.site_project_id || 'Unassigned';
+      if (!index.has(key)) {
+        const entry = {
+          site_project_id: row.site_project_id,
+          client_project_name: row.client_project_name,
+          documents: [],
+        };
+        index.set(key, entry);
+        sites.push(entry);
+      }
+      index.get(key).documents.push(row);
+    }
+    res.json({ sites });
+  })
+);
+
+/** Supervisor: sites + issued material available to return. */
+router.get(
+  '/return-options',
+  requireMobileRole(['supervisor', 'admin']),
+  wrap(async (req, res) => {
+    const params = [];
+    let scope = '';
+    if (req.user.role === 'supervisor') {
+      params.push(req.user.id);
+      scope = `AND s.assigned_supervisor_id = $${params.length}`;
+    }
+    const { rows: sites } = await query(
+      `SELECT s.id, s.site_project_id, s.client_project_name
+         FROM sites_master s
+        WHERE s.status = 'Active' ${scope}
+        ORDER BY s.site_project_id`,
+      params
+    );
+    const { rows: items } = await query(
+      `SELECT l.site_id, i.id AS item_id, i.item_code, i.item_name, i.unit,
+              SUM(l.net_qty) AS net_qty
+         FROM v_site_material_ledger l
+         JOIN items_master i ON i.id = l.item_id
+        WHERE l.net_qty > 0
+        GROUP BY l.site_id, i.id, i.item_code, i.item_name, i.unit
+        ORDER BY i.item_code`
+    );
+    const { rows: vendors } = await query(
+      `SELECT id, vendor_name FROM vendors_master WHERE status = 'Active' ORDER BY vendor_name`
+    );
+    res.json({ sites, items, vendors });
+  })
+);
+
+/** Supervisor: raise a return from the field app. */
+router.post(
+  '/returns',
+  requireMobileRole(['supervisor', 'admin']),
+  wrap(async (req, res) => {
+    const created = await tx((client) => raiseReturn(client, req, req.body || {}));
+    res.status(201).json(created);
+  })
+);
+
+/** Supervisor: one-tap handover to the assigned driver. */
+router.post(
+  '/returns/:id/handover',
+  requireMobileRole(['supervisor', 'admin']),
+  wrap(async (req, res) => {
+    const result = await tx((client) => markHandover(client, req, req.params.id));
+    res.json(result);
+  })
+);
+
+/** Helper: one-tap store receipt with optional arrival photo. */
+router.post(
+  '/returns/:id/receive',
+  requireMobileRole(['store_helper', 'admin']),
+  wrap(async (req, res) => {
+    const result = await tx((client) => markReceived(client, req, req.params.id, req.body || {}));
+    res.json(result);
   })
 );
 

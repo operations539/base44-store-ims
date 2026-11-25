@@ -25,8 +25,9 @@ docker compose up -d          # db → migrate+seed → api → web
 open http://localhost:3000
 ```
 
-Migrations live in `server/migrations` and are applied by the `migrate` service, which
-also seeds the demo dataset and then exits. `schema_migrations` records what has run.
+Migrations live in `server/migrations` and run at API startup (`node src/migrate.js`)
+together with the idempotent demo seed, so no one-shot container exits under the
+health checker. `schema_migrations` records what has run.
 
 ## Demo logins (Layer 1 seed)
 
@@ -105,7 +106,7 @@ curl -s localhost:3000/api/health
 
 Layer 1: schema, auth + RBAC, shells, admin panel, demo seed.
 
-Layer 2 (this build): core operational workflows.
+Layer 2: core operational workflows.
 
 | Screen | What it does |
 | --- | --- |
@@ -124,8 +125,21 @@ write none. The MRN status is then derived from the dispatch ledger
 Bill photos upload to the API (`POST /api/files`, JPG/PNG/WEBP up to 4 MB) and are
 served only to signed-in users through `GET /api/files/:name`.
 
-Not yet built: helper mobile PWA capture of signed DCs, five-stage returns,
-the five executive dashboards, messaging/API hub (Layer 3).
+Layer 3 (this build): field app, returns gate, executive views and the API hub.
+
+| Screen | What it does |
+| --- | --- |
+| Helper PWA (`/m/packing`, `/m/scan`) | Two tabs only, zero pricing: approved packing lists with site/transport details, 1-tap signed-DC capture that marks the challan Delivered-Signed, clears the 48-hour alert and files the photo in the site gallery with a share link |
+| Material Returns (`/returns`, `/m/returns/new`) | Five stages — raised, pickup assigned, picked up, store received, system posted. Usable adds back to store stock, scrap only raises the scrap bucket, short/missing needs remarks and flags Owners & VP. Sent = usable + scrap + short is enforced per line; >48h needs a delay reason; vendor returns need a signed return DC |
+| Executive dashboards (`/`) | Overview plus five live tabs — MRN-to-delivery, challan status & signed-DC archive, returns & 48-hr SLA, stock & site ledger, scrap & pending bills — each with CSV and PDF export and role-scoped quick actions |
+| Admin (`/admin/documents`, `/admin/messaging`, `/admin/api`) | FY numbering prefixes, fixed PO terms, rate-free 3-copy DC header; email/WhatsApp settings with event toggles and a retryable send log; scoped revocable API keys with documented internal REST endpoints |
+| Internal API (`/api/v1`) | Bearer tokens (SHA-256 hashed), scopes for stock, MRNs, dispatch and masters; every write is audit-logged. External ERP sync stays inactive in Phase 1 |
+
+A background scanner runs every five minutes and raises the 48-hour SLA flags for
+unsigned challans and unclosed returns, notifying the responsible roles once.
+
+Still reserved: WhatsApp Business API sending (Phase 2), external ERP sync, and
+Google OAuth until `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` are set.
 
 Google OAuth is wired but inactive until `GOOGLE_CLIENT_ID` and
 `GOOGLE_CLIENT_SECRET` are present in the environment.
